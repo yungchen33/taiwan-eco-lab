@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>台灣動植物・歷史政治生態融合實驗室</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style2.css">
+</head>
+<body>
+
+<div class="game-container">
+    <header class="main-header">
+        <h1>台灣生態 × 歷史政治融合實驗室</h1>
+        <p class="subtitle">選擇台灣在地原生動植物與歷史標記，探索大時代下交織出的主體性與生態光譜！</p>
+    </header>
+
+    <div class="main-content">
+        <!-- 左側：可用元素區 -->
+        <section class="selection-section">
+            <h2>可用元素</h2>
+            <div class="item-grid" id="item-grid">
+                <!-- 動態載入元素 -->
+            </div>
+        </section>
+
+        <!-- 右側：融合實驗台 -->
+        <section class="lab-section">
+            <h2>政治生態融合實驗台</h2>
+            <p class="lab-hint" style="font-size: 0.85rem; color: #666; text-align: center; margin-bottom: 12px;">
+                點選元素的「＋」放入槽位，進行歷史生態融合
+            </p>
+            
+            <div class="slots-container" data-count="3">
+                <div class="slot" id="slot-0"><span>元素 A</span></div>
+                <span class="slot-plus">＋</span>
+                <div class="slot" id="slot-1"><span>元素 B</span></div>
+                <span class="slot-plus">＋</span>
+                <div class="slot" id="slot-2"><span>元素 C</span></div>
+                <span class="slot-plus" id="plus-3" hidden>＋</span>
+                <div class="slot" id="slot-3" hidden><span>元素 D</span></div>
+                <span class="slot-plus" id="plus-4" hidden>＋</span>
+                <div class="slot" id="slot-4" hidden><span>元素 E</span></div>
+            </div>
+
+            <div class="lab-actions">
+                <button id="mix-btn" class="btn primary" disabled>開始融合</button>
+                <button id="clear-btn" class="btn secondary">清除重置</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- 成果展示區 -->
+    <section class="result-section hidden" id="result-section">
+        <h2>融合成果</h2>
+        <div class="result-card">
+            <img id="result-img" class="result-avatar" src="" alt="融合結果" style="display:none;">
+            <div class="result-info">
+                <span id="result-status" class="result-status"></span>
+                <h3 id="result-title">融合標題</h3>
+                <div id="result-desc" class="result-notes"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 圖鑑區塊 -->
+    <section class="codex-section">
+        <h2>台灣政治生態圖鑑解鎖進度</h2>
+        
+        <div class="codex-header-container">
+            <div class="codex-counter-display">
+                <span class="codex-current-num" id="unlocked-current-num">00</span>
+                <span class="codex-total-num" id="codex-total-num">/ 377</span>
+            </div>
+            <div class="codex-info-side">
+                <div class="codex-status-text" id="codex-status-text">已解鎖 0 種台灣生物組合</div>
+                <div class="codex-progress-bar-bg">
+                    <div class="codex-progress-bar-fill" id="codex-progress-fill"></div>
+                </div>
+                <div class="codex-percentage" id="codex-percentage-text">0.0%</div>
+            </div>
+        </div>
+
+        <div class="codex-toolbar" role="group" aria-label="圖鑑篩選">
+            <button type="button" class="codex-filter-btn active" data-filter="unlocked">已收集</button>
+            <button type="button" class="codex-filter-btn" data-filter="all">看全部格子</button>
+            <button type="button" id="codex-reset-btn" class="codex-reset-btn" hidden>清除收藏紀錄</button>
+        </div>
+
+        <div class="codex-grid" id="codex-grid">
+            <!-- 已經解鎖的組合會顯示在這裡 -->
+        </div>
+    </section>
+
+    <!-- 關於本遊戲 -->
+    <section class="about-section">
+        <h2>關於本遊戲</h2>
+        <ul>
+            <li>本遊戲以台灣不同年代的政治與社會運動中出現過的稱呼為題，搭配台灣在地的原生動植物，讓玩家探索這些名稱背後的歷史脈絡。收錄的稱呼以泛綠陣營（民進黨與其支持者）在不同時期被稱呼，或自稱的名稱為主。</li>
+            <li>「歷史稱呼」皆為各時期實際出現過的用語。有些原本是外界貼上的標籤，甚至用來攻擊，後來被支持者與參與者接過來，成為大方承認的身分與記憶；也有些是事件名稱或支持者的自嘲。呈現這些稱呼，是為了說明它們在歷史上的使用脈絡，並不代表對任何人或群體的評價。</li>
+            <li>動植物與稱呼的對應，是遊戲設計者依其特性所做的象徵與聯想，並非學術分類或官方定論。</li>
+            <li>收藏進度只儲存在你目前使用的瀏覽器中，更換裝置或清除瀏覽器資料後不會保留。</li>
+        </ul>
+    </section>
+</div>
+
+<!-- 博物館收藏卡牌彈跳視窗 Modal -->
+<div id="badge-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-label="收藏卡牌預覽">
+    <div class="card-modal-stage">
+        <button id="close-badge-modal" class="stage-close-btn" aria-label="關閉">✕</button>
+        
+        <div id="modal-reveal-banner" class="reveal-banner" hidden>✦ 隱藏配方解鎖 ✦</div>
+
+        <div class="collectible-card">
+            <div class="card-rays" aria-hidden="true"></div>
+            <div class="card-sparkles" aria-hidden="true"><span>✦</span><span>✦</span><span>✦</span><span>✦</span><span>✦</span><span>✦</span><span>✦</span><span>✦</span><span>✦</span><span>✦</span><span>✦</span><span>✦</span><span>✦</span><span>✦</span></div>
+            <div id="modal-card-stamp" class="card-unlocked-stamp">雙元素</div>
+            
+            <div class="card-header-meta">
+                <span id="modal-card-series">台灣政治生態圖鑑</span>
+                <span id="modal-card-num">NO. 001</span>
+            </div>
+            
+            <div class="card-badge-wrapper">
+                <img id="modal-badge-img" class="card-badge-img" src="" alt="政治生態徽章">
+            </div>
+            
+            <div class="card-info-section">
+                <h4 id="modal-badge-title" class="card-main-title"></h4>
+                <div class="card-divider"><span>◆</span></div>
+                <div id="modal-card-combo" class="card-combo"></div>
+                <div id="modal-card-label" class="card-meta-label">歷史稱呼</div>
+                <div id="modal-card-meta" class="card-meta-text"></div>
+            </div>
+
+            <div id="modal-card-footer" class="card-footer-archive">ECO ARCHIVE · TAIWAN</div>
+        </div>
+
+        <div class="stage-actions">
+            <button id="modal-download-btn" class="btn primary" type="button">⬇ 下載卡牌</button>
+            <button id="modal-ok-btn" class="btn secondary" type="button">關閉預覽</button>
+        </div>
+        <details id="stage-history" class="stage-history">
+            <summary>查看歷史說明</summary>
+            <div id="modal-history" class="history-panel"></div>
+        </details>
+        <button id="modal-save-fallback" class="link-btn" type="button">下載不了？改用長按儲存圖片</button>
+    </div>
+</div>
+
+<!-- 長按儲存圖片（內建瀏覽器無法下載時的備案） -->
+<div id="save-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-label="儲存卡牌圖片">
+    <div class="modal-card save-card">
+        <button id="close-save-modal" class="modal-close-btn" aria-label="關閉">✕</button>
+        <h3>長按圖片即可儲存</h3>
+        <p class="save-hint">若沒有出現儲存選項，請改用手機內建瀏覽器（Safari／Chrome）開啟此網頁。</p>
+        <img id="save-img" alt="收藏卡牌圖片">
+    </div>
+</div>
+
+<!-- 詳細資訊彈跳視窗 Modal -->
+<div id="species-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-label="元素詳細資訊">
+    <div class="modal-card" id="species-modal-inner"></div>
+</div>
+
+<script src="script2.js"></script>
+</body>
+</html>
