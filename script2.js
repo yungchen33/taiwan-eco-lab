@@ -158,6 +158,10 @@ const recipeDatabase = {
     "firefly-salmon-wild_boar": { name: "晨露螢野豬鮭映像", img: "firefly_wild_boar_salmon.jpg" }
 };
 
+// ── 圖片路徑：縮圖(200px) 與 卡面圖(720px) 都是 WebP；原始大圖不再載入 ──
+function thumbSrc(src) { return 'img/thumb/' + src.replace(/^.*\//, '').replace(/\.(jpe?g|png|webp)$/i, '.webp'); }
+function cardSrc(src)  { return 'img/card/'  + src.replace(/^.*\//, '').replace(/\.(jpe?g|png|webp)$/i, '.webp'); }
+
 // 槽位最多 5 個；累計收集 10 張開啟第 4 個、25 張開啟第 5 個
 const MAX_SLOTS = 5;
 const SLOT_THRESHOLDS = [0, 0, 0, 10, 25];
@@ -381,7 +385,7 @@ function initGame() {
         node.setAttribute('aria-label', `${el.name}，查看詳細說明`);
         // 卡片只保留：圖、名稱、歷史稱呼、年代；其餘（意涵、註解）放在詳細視窗
         node.innerHTML = `
-            <img src="${el.img}" class="item-img" alt="${el.name}" onerror="this.onerror=null;this.src='bamboo.jpg';">
+            <img src="${thumbSrc(el.img)}" class="item-img" decoding="async" alt="${el.name}" onerror="this.onerror=null;this.src='img/thumb/bamboo.webp';">
             <span class="species-name">${el.name}</span>
             <span class="historical-label">${cleanLabel(el)}</span>
             <div class="time-meta">◷ ${el.era}</div>
@@ -439,7 +443,7 @@ function showDetailModal(el) {
     modalInner.innerHTML = `
         <button id="modal-close" class="modal-close-btn" aria-label="關閉">✕</button>
         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px; text-align: left;">
-            <img src="${el.img}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" alt="${el.name}" onerror="this.onerror=null;this.src='bamboo.jpg';">
+            <img src="${thumbSrc(el.img)}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" alt="${el.name}" onerror="this.onerror=null;this.src='img/thumb/bamboo.webp';">
             <div>
                 <h3 style="color: #2c5e3b; font-size: 1.3rem; margin-bottom: 4px;">${el.name}</h3>
                 <div class="historical-label" style="margin-bottom: 4px; display: inline-block;">${cleanLabel(el)}</div>
@@ -502,7 +506,7 @@ function updateSlotsUI() {
         if (el) {
             slot.className = 'slot filled';
             slot.setAttribute('aria-label', `${el.name}，點選移除`);
-            slot.innerHTML = `<img src="${el.img}" class="slot-img-inner" alt="${el.name}" onerror="this.onerror=null;this.src='bamboo.jpg';">`;
+            slot.innerHTML = `<img src="${thumbSrc(el.img)}" class="slot-img-inner" alt="${el.name}" onerror="this.onerror=null;this.src='img/thumb/bamboo.webp';">`;
         } else {
             slot.className = 'slot';
             slot.setAttribute('aria-label', `空槽位 ${letters[i]}`);
@@ -539,19 +543,14 @@ function permutations(arr) {
     );
 }
 
-// 依序測試候選圖檔，回傳第一個真的載入成功的路徑
-function loadFirstValidImage(candidates) {
-    return new Promise(resolve => {
-        let i = 0;
-        const tryNext = () => {
-            if (i >= candidates.length) return resolve('bamboo.jpg');
-            const test = new Image();
-            test.onload = () => resolve(candidates[i]);
-            test.onerror = () => { i++; tryNext(); };
-            test.src = candidates[i];
-        };
-        tryNext();
-    });
+// 決定結果卡用哪個圖檔。
+// 有 manifest.js（window.CARD_FILES）時完全不用發請求；沒有時同時探測所有候選（不再一個一個等 404）
+function resolveCardImage(candidates) {
+    if (window.CARD_FILES) {
+        return Promise.resolve(candidates.find(c => window.CARD_FILES.has(c)) || 'bamboo.jpg');
+    }
+    return Promise.all(candidates.map(c => loadImage(cardSrc(c)).then(img => (img ? c : null))))
+        .then(r => r.find(Boolean) || 'bamboo.jpg');
 }
 
 // 資料庫沒登記的組合（目前三選組合只登記了 4 種）→ 自動產生專屬風格名稱
@@ -597,8 +596,8 @@ function renderResult({ img, title, statusText, statusClass, notesHtml, onPrevie
 
     resultImg.style.display = 'block';
     resultImg.className = 'result-avatar';
-    resultImg.onerror = function() { this.onerror = null; this.src = 'bamboo.jpg'; };
-    resultImg.src = img;
+    resultImg.onerror = function() { this.onerror = null; this.src = 'img/card/bamboo.webp'; };
+    resultImg.src = cardSrc(img);
 
     const showBadgeBtn = document.createElement('button');
     showBadgeBtn.id = 'download-badge-btn';
@@ -694,7 +693,8 @@ async function handleMixAction() {
         ...perms.map(p => p.join('_') + '.jpg'),
         activeElements[activeElements.length - 1].img
     ];
-    const finalImg = await loadFirstValidImage(candidates);
+    const finalImg = await resolveCardImage(candidates);
+    await loadImage(cardSrc(finalImg)); // 先放進快取，結果卡出現時圖片已就緒
 
     // 以固定順序作為圖鑑 key，A+B 與 B+A 視為同一張卡
     const dashKey = canonicalKey(ids);
@@ -746,7 +746,7 @@ function buildResultNotes(els) {
     return els.map(el => `
         <details class="element-note">
             <summary class="note-head">
-                <img class="note-thumb" src="${el.img}" alt="${el.name}" onerror="this.onerror=null;this.src='bamboo.jpg';">
+                <img class="note-thumb" src="${thumbSrc(el.img)}" alt="${el.name}" onerror="this.onerror=null;this.src='img/thumb/bamboo.webp';">
                 <span class="note-title">
                     <span class="note-name">${el.name}</span>
                     <span class="note-label">${cleanLabel(el)}</span>
@@ -812,8 +812,8 @@ function showBadgeModal(info) {
         : (r => ({ text: r.text, cls: [r.cls] }))(rarityInfo(info.ids.length));
 
     if (badgeImg) {
-        badgeImg.onerror = function() { this.onerror = null; this.src = 'bamboo.jpg'; };
-        badgeImg.src = info.img;
+        badgeImg.onerror = function() { this.onerror = null; this.src = 'img/card/bamboo.webp'; };
+        badgeImg.src = cardSrc(info.img);
     }
     if (badgeTitle) badgeTitle.textContent = info.title;
     if (cardMeta) {
@@ -827,7 +827,7 @@ function showBadgeModal(info) {
             cardMeta.innerHTML = '<div class="meta-list">' + info.ids.map(id => {
                 const e = getElement(id);
                 const thumb = multi
-                    ? `<img src="${e.img}" alt="${e.name}" title="${e.name}" onerror="this.onerror=null;this.src='bamboo.jpg';">`
+                    ? `<img src="${thumbSrc(e.img)}" alt="${e.name}" title="${e.name}" onerror="this.onerror=null;this.src='img/thumb/bamboo.webp';">`
                     : '';
                 return `<div class="meta-row">${thumb}<span>${cleanLabel(e)}</span></div>`;
             }).join('') + '</div>';
@@ -851,7 +851,7 @@ function showBadgeModal(info) {
         const showThumbs = isHidden && info.ids.length >= 2 && info.ids.length <= 5;
         combo.innerHTML = !showThumbs ? '' : info.ids.map(id => {
             const e = getElement(id);
-            return `<img src="${e.img}" class="combo-thumb" alt="${e.name}" title="${e.name}" onerror="this.onerror=null;this.src='bamboo.jpg';">`;
+            return `<img src="${thumbSrc(e.img)}" class="combo-thumb" alt="${e.name}" title="${e.name}" onerror="this.onerror=null;this.src='img/thumb/bamboo.webp';">`;
         }).join('<span class="combo-plus">＋</span>');
     }
     const history = document.getElementById('modal-history');
@@ -863,17 +863,26 @@ function showBadgeModal(info) {
 
     // 記錄目前卡牌，並先在背景把圖片畫好（點下載時可立即使用，行動裝置的分享才不會逾時）
     currentCardInfo = info;
-    cardBlobPromise = renderCardBlob(info);
-    cardBlobPromise.catch(() => {});
+    setTimeout(() => { getCardBlobPromise(info).catch(() => {}); }, 200); // 彈窗先出現，再於背景畫圖
 }
 
 // ══════════════════════════════════════════════
 // 卡牌下載：用 Canvas 直接畫出卡牌 PNG（不依賴截圖套件）
 // ══════════════════════════════════════════════
 let currentCardInfo = null;
-let cardBlobPromise = null;
+const cardBlobCache = new Map(); // 同一張卡只畫一次（最多留 6 張，避免佔太多記憶體）
+function getCardBlobPromise(info) {
+    const key = info.hidden ? 'h:' + info.hidden.id : 'n:' + info.ids.join('-');
+    if (!cardBlobCache.has(key)) {
+        const p = renderCardBlob(info);
+        p.catch(() => cardBlobCache.delete(key));
+        cardBlobCache.set(key, p);
+        if (cardBlobCache.size > 6) cardBlobCache.delete(cardBlobCache.keys().next().value);
+    }
+    return cardBlobCache.get(key);
+}
 
-const CARD_W = 300, CARD_H = 435, CARD_SCALE = 4; // 輸出 1200 × 1740 px
+const CARD_W = 300, CARD_H = 435, CARD_SCALE = 3; // 輸出 900 × 1305 px（要更大可改回 4）
 const FONT_STACK = '"Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Segoe UI", sans-serif';
 
 function loadImage(src) {
@@ -885,7 +894,7 @@ function loadImage(src) {
     });
 }
 async function loadImageWithFallback(src) {
-    return (await loadImage(src)) || (await loadImage('bamboo.jpg'));
+    return (await loadImage(src)) || (await loadImage('img/card/bamboo.webp'));
 }
 
 function drawRoundRect(ctx, x, y, w, h, r) {
@@ -1004,8 +1013,8 @@ async function renderCardBlob(info) {
     } catch (e) { /* 字型載入失敗時使用備用字型 */ }
 
     const [badgeImg, ...thumbImgs] = await Promise.all([
-        loadImageWithFallback(info.img),
-        ...(info.ids.length > 1 ? info.ids.map(id => loadImageWithFallback(getElement(id).img)) : [])
+        loadImageWithFallback(cardSrc(info.img)),
+        ...(info.ids.length > 1 ? info.ids.map(id => loadImageWithFallback(thumbSrc(getElement(id).img))) : [])
     ]);
 
     const canvas = document.createElement('canvas');
@@ -1233,8 +1242,8 @@ async function renderHiddenCardBlob(info) {
     } catch (e) { /* 字型載入失敗時使用備用字型 */ }
 
     const [badgeImg, ...thumbImgs] = await Promise.all([
-        loadImageWithFallback(info.img),
-        ...(showThumbs ? info.ids.map(id => loadImageWithFallback(getElement(id).img)) : [])
+        loadImageWithFallback(cardSrc(info.img)),
+        ...(showThumbs ? info.ids.map(id => loadImageWithFallback(thumbSrc(getElement(id).img))) : [])
     ]);
 
     const canvas = document.createElement('canvas');
@@ -1469,7 +1478,11 @@ async function renderHiddenCardBlob(info) {
 }
 
 function isInAppBrowser() {
-    return /Line\/|FBAN|FBAV|FB_IAB|Instagram|MicroMessenger|Threads|Messenger/i.test(navigator.userAgent);
+    const ua = navigator.userAgent;
+    // Threads 的 UA 代號是 "Barcelona"，不含 "Threads"；Android WebView 帶有 "; wv)"
+    if (/Line\/|FBAN|FBAV|FB_IAB|Instagram|Barcelona|Threads|MicroMessenger|Messenger|KAKAOTALK|Snapchat|TikTok|musical_ly|; wv\)/i.test(ua)) return true;
+    // iOS 的 WebView（非 Safari/Chrome）UA 沒有 "Safari/"
+    return /iPhone|iPad|iPod/i.test(ua) && !/Safari\//i.test(ua);
 }
 function isMobileDevice() {
     return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
@@ -1500,13 +1513,14 @@ function openSaveModal(blob) {
     reader.onload = () => {
         img.src = reader.result; // 用 data URL，內建瀏覽器的長按儲存較穩定
         openModal('save-modal');
+        showToast('長按圖片即可儲存到相簿', 3200);
     };
     reader.readAsDataURL(blob);
 }
 
 async function getCurrentCardBlob() {
     if (!currentCardInfo) throw new Error('no card');
-    return cardBlobPromise || renderCardBlob(currentCardInfo);
+    return getCardBlobPromise(currentCardInfo);
 }
 
 function notifyExportError(err) {
@@ -1577,7 +1591,7 @@ function makeCodexCell(ids) {
         div.tabIndex = 0;
         div.setAttribute('role', 'button');
         div.innerHTML = `
-            <img src="${data.img}" class="codex-thumb" alt="${data.name}" onerror="this.onerror=null;this.src='bamboo.jpg';">
+            <img src="${thumbSrc(data.img)}" class="codex-thumb" loading="lazy" decoding="async" alt="${data.name}" onerror="this.onerror=null;this.src='img/thumb/bamboo.webp';">
             <span class="codex-name">${data.name}</span>
             <span class="codex-no">NO. ${numStr}</span>
         `;
@@ -1618,7 +1632,7 @@ function renderHiddenCodex(grid) {
         div.tabIndex = 0;
         div.setAttribute('role', 'button');
         div.innerHTML = `
-            <img src="${r.img}" class="codex-thumb" alt="${r.name}" onerror="this.onerror=null;this.src='bamboo.jpg';">
+            <img src="${thumbSrc(r.img)}" class="codex-thumb" loading="lazy" decoding="async" alt="${r.name}" onerror="this.onerror=null;this.src='img/thumb/bamboo.webp';">
             <span class="codex-name">${r.name}</span>
             <span class="codex-no">${r.code}</span>
         `;

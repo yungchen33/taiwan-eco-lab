@@ -4,10 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>台灣動植物・歷史政治生態融合實驗室</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style2.css">
 </head>
 <body>
+
+<!-- 內建瀏覽器（LINE / Threads / IG 等）提示列：只在偵測到時顯示 -->
+<div id="inapp-banner" hidden style="position:sticky;top:0;z-index:50;background:#fff7e0;border-bottom:1px solid #e6cf8a;color:#6b4e12;font-size:0.82rem;padding:8px 12px;text-align:center;">
+    <span id="inapp-text">目前在內建瀏覽器中，下載卡牌可能受限。</span>
+    <a id="inapp-open" href="#" hidden style="margin-left:8px;color:#2c5e3b;font-weight:700;">改用瀏覽器開啟</a>
+    <button type="button" id="inapp-close" aria-label="關閉" style="margin-left:8px;background:none;border:0;cursor:pointer;color:#6b4e12;">✕</button>
+</div>
 
 <div class="game-container">
     <header class="main-header">
@@ -153,7 +162,7 @@
     <div class="modal-card save-card">
         <button id="close-save-modal" class="modal-close-btn" aria-label="關閉">✕</button>
         <h3>長按圖片即可儲存</h3>
-        <p class="save-hint">若沒有出現儲存選項，請改用手機內建瀏覽器（Safari／Chrome）開啟此網頁。</p>
+        <p class="save-hint">若沒有出現儲存選項，請點右上角「⋯」或分享圖示，選擇「用瀏覽器開啟」（Safari／Chrome）後再下載。</p>
         <img id="save-img" alt="收藏卡牌圖片">
     </div>
 </div>
@@ -163,6 +172,24 @@
     <div class="modal-card" id="species-modal-inner"></div>
 </div>
 
+<script src="img/manifest.js"></script>
 <script src="script2.js"></script>
+<script>
+(function () {
+    if (typeof isInAppBrowser !== 'function' || !isInAppBrowser()) return;
+    var banner = document.getElementById('inapp-banner');
+    if (!banner) return;
+    banner.hidden = false;
+    if (/Line\//i.test(navigator.userAgent)) {
+        // LINE：加上 openExternalBrowser=1 會自動跳到外部瀏覽器
+        var u = new URL(location.href); u.searchParams.set('openExternalBrowser', '1');
+        var a = document.getElementById('inapp-open'); a.href = u.toString(); a.hidden = false;
+        document.getElementById('inapp-text').textContent = '建議用瀏覽器開啟，載入與下載都更順。';
+    } else {
+        document.getElementById('inapp-text').textContent = '下載時若失敗，請點右上角「⋯」→「用瀏覽器開啟」，或長按卡牌圖片儲存。';
+    }
+    document.getElementById('inapp-close').onclick = function () { banner.hidden = true; };
+})();
+</script>
 </body>
 </html>
